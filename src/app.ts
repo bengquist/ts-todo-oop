@@ -15,14 +15,23 @@ class Project {
 }
 
 // Project State Management
-type Listener = (items: Project[]) => void;
+type Listener<T> = (items: T[]) => void;
 
-class ProjectState {
-  private listeners: Listener[] = [];
+class State<T> {
+  protected listeners: Listener<T>[] = [];
+
+  addListener(fn: Listener<T>) {
+    this.listeners.push(fn);
+  }
+}
+
+class ProjectState extends State<Project> {
   private projects: Project[] = [];
   private static instance: ProjectState;
 
-  private constructor() {}
+  private constructor() {
+    super();
+  }
 
   static getInstance() {
     if (this.instance) {
@@ -31,10 +40,6 @@ class ProjectState {
 
     this.instance = new ProjectState();
     return this.instance;
-  }
-
-  addListener(fn: Listener) {
-    this.listeners.push(fn);
   }
 
   addProject(title: string, description: string, people: number) {
@@ -151,6 +156,23 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> {
     this.renderContent();
   }
 
+  renderContent() {
+    const listId = `${this.type}-project-list}`;
+    this.element.querySelector("ul")!.id = listId;
+    this.element.querySelector(
+      "h2"
+    )!.textContent = `${this.type.toUpperCase()} PROJECTS`;
+  }
+
+  configure() {
+    projectState.addListener((projects) => {
+      const filteredProjects = this.filterProjects(projects);
+
+      this.assignedProjects = filteredProjects;
+      this.renderProjects();
+    });
+  }
+
   private filterProjects(projects: Project[]) {
     return projects.filter((project) => {
       if (this.type === "active") {
@@ -175,23 +197,6 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> {
       listEl?.appendChild(listItem);
     }
   }
-
-  renderContent() {
-    const listId = `${this.type}-project-list}`;
-    this.element.querySelector("ul")!.id = listId;
-    this.element.querySelector(
-      "h2"
-    )!.textContent = `${this.type.toUpperCase()} PROJECTS`;
-  }
-
-  configure() {
-    projectState.addListener((projects) => {
-      const filteredProjects = this.filterProjects(projects);
-
-      this.assignedProjects = filteredProjects;
-      this.renderProjects();
-    });
-  }
 }
 
 // Project Form
@@ -215,6 +220,12 @@ class ProjectForm extends Component<HTMLDivElement, HTMLFormElement> {
 
     this.configure();
   }
+
+  configure() {
+    this.element.addEventListener("submit", this.submitHandler);
+  }
+
+  renderContent() {}
 
   private gatherUserInput() {
     const title = this.titleInputElement.value;
@@ -252,12 +263,6 @@ class ProjectForm extends Component<HTMLDivElement, HTMLFormElement> {
       );
       this.clearUserInputs();
     }
-  }
-
-  renderContent() {}
-
-  configure() {
-    this.element.addEventListener("submit", this.submitHandler);
   }
 }
 

@@ -31,9 +31,17 @@ class Project {
         this.status = status;
     }
 }
-class ProjectState {
+class State {
     constructor() {
         this.listeners = [];
+    }
+    addListener(fn) {
+        this.listeners.push(fn);
+    }
+}
+class ProjectState extends State {
+    constructor() {
+        super();
         this.projects = [];
     }
     static getInstance() {
@@ -42,9 +50,6 @@ class ProjectState {
         }
         this.instance = new ProjectState();
         return this.instance;
-    }
-    addListener(fn) {
-        this.listeners.push(fn);
     }
     addProject(title, description, people) {
         const newProject = {
@@ -117,6 +122,18 @@ class ProjectList extends Component {
         this.configure();
         this.renderContent();
     }
+    renderContent() {
+        const listId = `${this.type}-project-list}`;
+        this.element.querySelector("ul").id = listId;
+        this.element.querySelector("h2").textContent = `${this.type.toUpperCase()} PROJECTS`;
+    }
+    configure() {
+        projectState.addListener((projects) => {
+            const filteredProjects = this.filterProjects(projects);
+            this.assignedProjects = filteredProjects;
+            this.renderProjects();
+        });
+    }
     filterProjects(projects) {
         return projects.filter((project) => {
             if (this.type === "active") {
@@ -136,18 +153,6 @@ class ProjectList extends Component {
             listEl === null || listEl === void 0 ? void 0 : listEl.appendChild(listItem);
         }
     }
-    renderContent() {
-        const listId = `${this.type}-project-list}`;
-        this.element.querySelector("ul").id = listId;
-        this.element.querySelector("h2").textContent = `${this.type.toUpperCase()} PROJECTS`;
-    }
-    configure() {
-        projectState.addListener((projects) => {
-            const filteredProjects = this.filterProjects(projects);
-            this.assignedProjects = filteredProjects;
-            this.renderProjects();
-        });
-    }
 }
 // Project Form
 let ProjectForm = /** @class */ (() => {
@@ -159,6 +164,10 @@ let ProjectForm = /** @class */ (() => {
             this.peopleInputElement = this.element.querySelector("#people");
             this.configure();
         }
+        configure() {
+            this.element.addEventListener("submit", this.submitHandler);
+        }
+        renderContent() { }
         gatherUserInput() {
             const title = this.titleInputElement.value;
             const description = this.descriptionInputElement.value;
@@ -183,10 +192,6 @@ let ProjectForm = /** @class */ (() => {
                 projectState.addProject(userInput.title, userInput.description, userInput.people);
                 this.clearUserInputs();
             }
-        }
-        renderContent() { }
-        configure() {
-            this.element.addEventListener("submit", this.submitHandler);
         }
     }
     __decorate([
