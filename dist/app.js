@@ -60,6 +60,16 @@ class ProjectState extends State {
             status: ProjectStatus.Active,
         };
         this.projects.push(newProject);
+        this.updateListeners();
+    }
+    moveProject(projectId, newStatus) {
+        const project = this.projects.find((project) => project.id === projectId);
+        if (project) {
+            project.status = newStatus;
+            this.updateListeners();
+        }
+    }
+    updateListeners() {
         for (const fn of this.listeners) {
             fn(this.projects.slice());
         }
@@ -113,47 +123,117 @@ class Component {
         this.hostElement.insertAdjacentElement(insertAtStart ? "afterbegin" : "beforeend", this.element);
     }
 }
-// Project List
-class ProjectList extends Component {
-    constructor(type) {
-        super("project-list", "app", false, `${type}-projects`);
-        this.type = type;
-        this.assignedProjects = [];
-        this.configure();
-        this.renderContent();
-    }
-    renderContent() {
-        const listId = `${this.type}-project-list}`;
-        this.element.querySelector("ul").id = listId;
-        this.element.querySelector("h2").textContent = `${this.type.toUpperCase()} PROJECTS`;
-    }
-    configure() {
-        projectState.addListener((projects) => {
-            const filteredProjects = this.filterProjects(projects);
-            this.assignedProjects = filteredProjects;
-            this.renderProjects();
-        });
-    }
-    filterProjects(projects) {
-        return projects.filter((project) => {
-            if (this.type === "active") {
-                return project.status === ProjectStatus.Active;
+// Project Item
+let ProjectItem = /** @class */ (() => {
+    class ProjectItem extends Component {
+        constructor(hostId, project) {
+            super("single-project", hostId, true, project.id);
+            this.hostId = hostId;
+            this.project = project;
+            this.configure();
+            this.renderContent();
+        }
+        get people() {
+            if (this.project.people === 1) {
+                return "1 person assigned";
             }
             else {
-                return project.status === ProjectStatus.Finished;
+                return `${this.project.people} people assigned`;
             }
-        });
-    }
-    renderProjects() {
-        const listEl = document.getElementById(`${this.type}-project-list}`);
-        listEl.innerHTML = "";
-        for (const project of this.assignedProjects) {
-            const listItem = document.createElement("li");
-            listItem.textContent = project.title;
-            listEl === null || listEl === void 0 ? void 0 : listEl.appendChild(listItem);
+        }
+        dragStartHandler(event) {
+            var _a;
+            (_a = event.dataTransfer) === null || _a === void 0 ? void 0 : _a.setData("text/plain", this.project.id);
+            event.dataTransfer.effectAllowed = "move";
+        }
+        dragEndHandler() {
+            console.log("drag ended");
+        }
+        configure() {
+            this.element.addEventListener("dragstart", this.dragStartHandler);
+            this.element.addEventListener("dragend", this.dragEndHandler);
+        }
+        renderContent() {
+            this.element.querySelector("h2").textContent = this.project.title;
+            this.element.querySelector("h3").textContent = this.people;
+            this.element.querySelector("p").textContent = this.project.description;
         }
     }
-}
+    __decorate([
+        bind
+    ], ProjectItem.prototype, "dragStartHandler", null);
+    return ProjectItem;
+})();
+// Project List
+let ProjectList = /** @class */ (() => {
+    class ProjectList extends Component {
+        constructor(type) {
+            super("project-list", "app", false, `${type}-projects`);
+            this.type = type;
+            this.assignedProjects = [];
+            this.configure();
+            this.renderContent();
+        }
+        dragOverHandler(event) {
+            var _a;
+            if (((_a = event.dataTransfer) === null || _a === void 0 ? void 0 : _a.types[0]) === "text/plain") {
+                event.preventDefault();
+                const listElement = this.element.querySelector("ul");
+                listElement === null || listElement === void 0 ? void 0 : listElement.classList.add("droppable");
+            }
+        }
+        dropHandler(event) {
+            const projectId = event.dataTransfer.getData("text/plain");
+            projectState.moveProject(projectId, this.type === "active" ? ProjectStatus.Active : ProjectStatus.Finished);
+        }
+        dragLeaveHandler() {
+            const listElement = this.element.querySelector("ul");
+            listElement === null || listElement === void 0 ? void 0 : listElement.classList.remove("droppable");
+        }
+        renderContent() {
+            const listId = `${this.type}-project-list}`;
+            this.element.querySelector("ul").id = listId;
+            this.element.querySelector("h2").textContent = `${this.type.toUpperCase()} PROJECTS`;
+        }
+        configure() {
+            projectState.addListener((projects) => {
+                const filteredProjects = this.filterProjects(projects);
+                this.assignedProjects = filteredProjects;
+                this.renderProjects();
+            });
+            this.element.addEventListener("dragover", this.dragOverHandler);
+            this.element.addEventListener("dragleave", this.dragLeaveHandler);
+            this.element.addEventListener("drop", this.dropHandler);
+        }
+        filterProjects(projects) {
+            return projects.filter((project) => {
+                if (this.type === "active") {
+                    return project.status === ProjectStatus.Active;
+                }
+                else {
+                    return project.status === ProjectStatus.Finished;
+                }
+            });
+        }
+        renderProjects() {
+            const listEl = document.getElementById(`${this.type}-project-list}`);
+            listEl.innerHTML = "";
+            for (const project of this.assignedProjects) {
+                new ProjectItem(this.element.querySelector("ul").id, project);
+            }
+        }
+    }
+    __decorate([
+        bind
+    ], ProjectList.prototype, "dragOverHandler", null);
+    __decorate([
+        bind
+    ], ProjectList.prototype, "dropHandler", null);
+    __decorate([
+        bind
+    ], ProjectList.prototype, "dragLeaveHandler", null);
+    return ProjectList;
+})();
 // Project Form
 let ProjectForm = /** @class */ (() => {
     class ProjectForm extends Component {

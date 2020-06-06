@@ -1,3 +1,15 @@
+// Drag & Drop
+interface Draggable {
+  dragStartHandler(event: DragEvent): void;
+  dragEndHandler(event: DragEvent): void;
+}
+
+interface DragTarget {
+  dragOverHandler(event: DragEvent): void;
+  dropHandler(event: DragEvent): void;
+  dragLeaveHandler(event: DragEvent): void;
+}
+
 // Project
 enum ProjectStatus {
   Active,
@@ -52,6 +64,19 @@ class ProjectState extends State<Project> {
     };
 
     this.projects.push(newProject);
+    this.updateListeners();
+  }
+
+  moveProject(projectId: string, newStatus: ProjectStatus) {
+    const project = this.projects.find((project) => project.id === projectId);
+
+    if (project) {
+      project.status = newStatus;
+      this.updateListeners();
+    }
+  }
+
+  private updateListeners() {
     for (const fn of this.listeners) {
       fn(this.projects.slice());
     }
@@ -145,8 +170,49 @@ abstract class Component<T extends HTMLElement, U extends HTMLElement> {
   abstract renderContent(): void;
 }
 
+// Project Item
+class ProjectItem extends Component<HTMLUListElement, HTMLLIElement>
+  implements Draggable {
+  private get people() {
+    if (this.project.people === 1) {
+      return "1 person assigned";
+    } else {
+      return `${this.project.people} people assigned`;
+    }
+  }
+
+  constructor(private hostId: string, private project: Project) {
+    super("single-project", hostId, true, project.id);
+
+    this.configure();
+    this.renderContent();
+  }
+
+  @bind
+  dragStartHandler(event: DragEvent) {
+    event.dataTransfer?.setData("text/plain", this.project.id);
+    event.dataTransfer!.effectAllowed = "move";
+  }
+
+  dragEndHandler() {
+    console.log("drag ended");
+  }
+
+  configure() {
+    this.element.addEventListener("dragstart", this.dragStartHandler);
+    this.element.addEventListener("dragend", this.dragEndHandler);
+  }
+
+  renderContent() {
+    this.element.querySelector("h2")!.textContent = this.project.title;
+    this.element.querySelector("h3")!.textContent = this.people;
+    this.element.querySelector("p")!.textContent = this.project.description;
+  }
+}
+
 // Project List
-class ProjectList extends Component<HTMLDivElement, HTMLElement> {
+class ProjectList extends Component<HTMLDivElement, HTMLElement>
+  implements DragTarget {
   assignedProjects: Project[] = [];
 
   constructor(private type: "active" | "finished") {
@@ -154,6 +220,31 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> {
 
     this.configure();
     this.renderContent();
+  }
+
+  @bind
+  dragOverHandler(event: DragEvent) {
+    if (event.dataTransfer?.types[0] === "text/plain") {
+      event.preventDefault();
+      const listElement = this.element.querySelector("ul");
+      listElement?.classList.add("droppable");
+    }
+  }
+
+  @bind
+  dropHandler(event: DragEvent) {
+    const projectId = event.dataTransfer!.getData("text/plain");
+
+    projectState.moveProject(
+      projectId,
+      this.type === "active" ? ProjectStatus.Active : ProjectStatus.Finished
+    );
+  }
+
+  @bind
+  dragLeaveHandler() {
+    const listElement = this.element.querySelector("ul");
+    listElement?.classList.remove("droppable");
   }
 
   renderContent() {
@@ -171,6 +262,10 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> {
       this.assignedProjects = filteredProjects;
       this.renderProjects();
     });
+
+    this.element.addEventListener("dragover", this.dragOverHandler);
+    this.element.addEventListener("dragleave", this.dragLeaveHandler);
+    this.element.addEventListener("drop", this.dropHandler);
   }
 
   private filterProjects(projects: Project[]) {
@@ -191,10 +286,7 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> {
     listEl.innerHTML = "";
 
     for (const project of this.assignedProjects) {
-      const listItem = document.createElement("li");
-      listItem.textContent = project.title;
-
-      listEl?.appendChild(listItem);
+      new ProjectItem(this.element.querySelector("ul")!.id, project);
     }
   }
 }
