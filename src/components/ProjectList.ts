@@ -1,9 +1,9 @@
-import bind from "../decorators/bind.js";
-import { DragTarget } from "../models/dnd.js";
-import { Project, ProjectStatus } from "../models/project.js";
-import { projectState } from "../state/prrojectState.js";
-import Component from "./Component.js";
-import ProjectItem from "./ProjectItem.js";
+import bind from "../decorators/bind";
+import { DragTarget } from "../models/dnd";
+import { Project, ProjectStatus } from "../models/project";
+import { projectState } from "../state/prrojectState";
+import Component from "./Component";
+import ProjectItem from "./ProjectItem";
 
 export default class ProjectList extends Component<HTMLDivElement, HTMLElement>
   implements DragTarget {

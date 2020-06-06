@@ -1,7 +1,7 @@
-import bind from "../decorators/bind.js";
-import { projectState } from "../state/prrojectState.js";
-import validate from "../util/validate.js";
-import Component from "./Component.js";
+import bind from "../decorators/bind";
+import { projectState } from "../state/prrojectState";
+import validate from "../util/validate";
+import Component from "./Component";
 
 export default class ProjectForm extends Component<
   HTMLDivElement,

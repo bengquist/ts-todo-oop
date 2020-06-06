@@ -1,7 +1,7 @@
-import bind from "../decorators/bind.js";
-import { Draggable } from "../models/dnd.js";
-import { Project } from "../models/project.js";
-import Component from "./Component.js";
+import bind from "../decorators/bind";
+import { Draggable } from "../models/dnd";
+import { Project } from "../models/project";
+import Component from "./Component";
 
 export default class ProjectItem
   extends Component<HTMLUListElement, HTMLLIElement>
